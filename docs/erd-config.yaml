@@ -1,0 +1,7 @@
+app_label: django_munin
+groups:
+  - name: configuration
+    title: "Configuration"
+    models:
+      - Module
+      - ConfigEntry
