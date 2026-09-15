@@ -1,6 +1,6 @@
 [project]
 name = "entirius-django-munin"
-version = "2.0.0"
+version = "2.1.0"
 description = "Module discovery and runtime configuration for Volkanos"
 authors = [{ name = "Entirius" }]
 readme = "README.md"

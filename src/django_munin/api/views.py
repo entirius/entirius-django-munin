@@ -4,6 +4,8 @@
 
 """API views for Munin module discovery and config entries."""
 
+from importlib.util import find_spec
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django_utils.api.v2_errors import raise_pydantic_as_drf
@@ -34,6 +36,15 @@ def _is_admin_request(request: Request) -> bool:
     return request.user and request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)
 
 
+def _toolbox_status() -> str | None:
+    """Toolbox availability for the CMS; ``None`` when this Volkanos has no toolbox client installed."""
+    if find_spec("django_utils.toolbox") is None:
+        return None
+    from django_utils.toolbox.status import status
+
+    return str(status())
+
+
 @extend_schema_view(list=extend_schema(tags=["Module Discovery"]), retrieve=extend_schema(tags=["Module Discovery"]))
 class MuninViewSet(viewsets.ViewSet):
     """Public module discovery — returns deeper data for admin users."""
@@ -49,7 +60,8 @@ class MuninViewSet(viewsets.ViewSet):
     def list(self, request: Request, **kwargs) -> Response:
         is_admin = _is_admin_request(request)
         data = config_service.get_module_list(is_admin=is_admin)
-        return Response(data)
+        platform = {**data["platform"], "toolbox_status": _toolbox_status()}
+        return Response({**data, "platform": platform})
 
     @extend_schema(
         summary="Retrieve module by key",
