@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- `GET /api/munin/v2/` carries `platform.toolbox_status` (`configured` /
+  `unconfigured` / `unreachable`, from `django_utils.toolbox.status()`), so the
+  CMS can tell whether AI actions are usable. `null` when the toolbox client
+  is not installed. Additive: every existing field is unchanged.
+
 ## 2.0.0 — 2026-07-10
 
 - Initial public release: module discovery (`is_volkanos` AppConfig flag plus

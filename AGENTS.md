@@ -34,6 +34,8 @@ and serves via REST API. Frontends read this instead of hardcoding module lists.
 - `schemas/` — pydantic request/response schemas.
 - `api/` — `MuninViewSet` (AllowAny; admin JWT gets extra fields), `ConfigEntryViewSet`
   (JWT + IsAdminUser), pagination, permissions; root prefix `api/munin/v2/`.
+  The list adds `platform.toolbox_status` per request, outside munin's cache — lazy import behind
+  `find_spec("django_utils.toolbox")`, `None` without the client; munin never hard-imports the toolbox.
 - `management/commands/discover_modules.py` — manual re-scan entry point.
 
 Layer rule: `API → Services → Models → DB`. No ORM in views.
