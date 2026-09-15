@@ -7,6 +7,7 @@
 import pytest
 from django.apps import apps
 
+import django_munin
 from django_munin.introspection import (
     detect_has_admin,
     detect_has_admin_api,
@@ -69,7 +70,7 @@ class TestIntrospection:
         """django_munin has __version__ in __init__.py."""
         app = apps.get_app_config("django_munin")
         version = detect_version(app)
-        assert version == "0.1.0-dev"
+        assert version == django_munin.__version__
 
     def test_detect_version_metadata_returns_none(self, monkeypatch):
         """importlib.metadata.version() can return None (dist-info without Version field).
