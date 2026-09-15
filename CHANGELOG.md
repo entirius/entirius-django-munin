@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.1.0 — unreleased
+## 2.1.0 — 2026-09-15
 
 - `GET /api/munin/v2/` carries `platform.toolbox_status` (`configured` /
   `unconfigured` / `unreachable`, from `django_utils.toolbox.status()`), so the
