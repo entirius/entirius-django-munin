@@ -29,6 +29,21 @@ Prefix `/api/munin/v2/`:
 
 Responses are cached (`MUNIN_CACHE_TTL`, default 300s); cache invalidates via post_save/post_delete signals on `Module` and `ConfigEntry`.
 
+## Toolbox Status
+
+The module list carries `platform.toolbox_status` — whether the AI toolbox is usable on this instance:
+
+| Value | Meaning |
+|---|---|
+| `configured` | toolbox settings present and the toolbox answered its model-catalogue probe |
+| `unconfigured` | `AI_TOOLBOX_BASE_URL`, `AI_TOOLBOX_API_KEY` or `AI_TOOLBOX_CHANNEL` is empty — no network call |
+| `unreachable` | settings present, but the probe failed (network, auth, 5xx) |
+| `null` | the toolbox client (`django_utils.toolbox`, `entirius-django-utils` ≥ 2.1.0) is not installed |
+
+The value comes from `django_utils.toolbox.status()` and is added per request, outside munin's response
+cache; the probe result itself is cached for 60 s by `django_utils`. Munin never hard-imports the toolbox.
+The CMS uses it to show or hide AI actions.
+
 ## Consumers
 
 - **cms-blueprint** — panel enablement (`useMuninStore`, `GET /api/munin/v2/`); `enabled_in_cms` toggled in Django admin drives the CMS sidebar
@@ -36,4 +51,4 @@ Responses are cached (`MUNIN_CACHE_TTL`, default 300s); cache invalidates via po
 
 ## Dependencies
 
-- `django-utils` — `BaseModel` timestamps
+- `django-utils` — `BaseModel` timestamps; optionally `django_utils.toolbox` for `platform.toolbox_status`

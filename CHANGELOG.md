@@ -1,11 +1,15 @@
 # Changelog
 
-## Unreleased
+## 2.1.0 — unreleased
 
 - `GET /api/munin/v2/` carries `platform.toolbox_status` (`configured` /
   `unconfigured` / `unreachable`, from `django_utils.toolbox.status()`), so the
   CMS can tell whether AI actions are usable. `null` when the toolbox client
-  is not installed. Additive: every existing field is unchanged.
+  is not installed (`entirius-django-utils` < 2.1.0). Computed per request,
+  outside munin's response cache; `status()` caches its own probe for 60 s.
+  Additive: every existing field is unchanged.
+- Docs: module overview for the portal (`docs/index.md`), this changelog.
+- `.github/CODEOWNERS`: `@entirius/maintainers-backend`.
 
 ## 2.0.0 — 2026-07-10
 
