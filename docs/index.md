@@ -29,20 +29,24 @@ Prefix `/api/munin/v2/`:
 
 Responses are cached (`MUNIN_CACHE_TTL`, default 300s); cache invalidates via post_save/post_delete signals on `Module` and `ConfigEntry`.
 
-## Toolbox Status
+## Configuration Health
 
-The module list carries `platform.toolbox_status` — whether the AI toolbox is usable on this instance:
+| Method | Path | Auth |
+|---|---|---|
+| GET | `/health/` | IsAdminUser — config checks, computed on every read (never cached by munin) |
+| POST | `/health/check/` | IsAdminUser — config checks plus live probes ("Check again") |
 
-| Value | Meaning |
-|---|---|
-| `configured` | toolbox settings present and the toolbox answered its model-catalogue probe |
-| `unconfigured` | `AI_TOOLBOX_BASE_URL`, `AI_TOOLBOX_API_KEY` or `AI_TOOLBOX_CHANNEL` is empty — no network call |
-| `unreachable` | settings present, but the probe failed (network, auth, 5xx) |
-| `null` | the toolbox client (`django_utils.toolbox`, `entirius-django-utils` ≥ 2.1.0) is not installed |
+Munin aggregates every Django system check tagged `entirius_config`; a check's second tag is its code
+(`email.smtp`). Each row carries `code`, `module`, `state`, `severity`, `title`, `detail`, `fix_url`, `scope`;
+failing rows come first, then one `configured` row per passing code. Probes (tag `entirius_probe`, registered
+`deploy=True`) run only on `POST /health/check/`. The same verdicts from the CLI:
 
-The value comes from `django_utils.toolbox.status()` and is added per request, outside munin's response
-cache; the probe result itself is cached for 60 s by `django_utils`. Munin never hard-imports the toolbox.
-The CMS uses it to show or hide AI actions.
+```bash
+python manage.py check --database default --tag entirius_config
+```
+
+Munin registers `toolbox.status` itself when `django_utils.toolbox` is installed — `django_utils.toolbox.status()`
+as a check (probe cached 60 s). The contract for adding a check lives in the portal guide *Configuration*.
 
 ## Consumers
 
@@ -51,4 +55,4 @@ The CMS uses it to show or hide AI actions.
 
 ## Dependencies
 
-- `django-utils` — `BaseModel` timestamps; optionally `django_utils.toolbox` for `platform.toolbox_status`
+- `django-utils` — `BaseModel` timestamps; optionally `django_utils.toolbox` for the `toolbox.status` check

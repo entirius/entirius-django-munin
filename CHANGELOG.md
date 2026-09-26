@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Configuration health.** `GET /api/munin/v2/health/` (IsAdminUser) aggregates every Django system check
+  tagged `entirius_config` into rows (`code`, `module`, `state`, `severity`, `title`, `detail`, `fix_url`,
+  `scope`); `POST /api/munin/v2/health/check/` adds the live probes (tag `entirius_probe`). The AI toolbox is
+  the first check, `toolbox.status`. CLI: `manage.py check --database default --tag entirius_config`.
+- **Deprecated:** `platform.toolbox_status` on `GET /api/munin/v2/` — read `toolbox.status` from `health/`
+  instead (entirius-pwa-cms does from the same release). Still sent, so an older CMS keeps its toolbox banner
+  after a munin upgrade; removed in 3.0.0.
+
 ## 2.1.0 — 2026-09-15
 
 - `GET /api/munin/v2/` carries `platform.toolbox_status` (`configured` /

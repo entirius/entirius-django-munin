@@ -34,8 +34,11 @@ and serves via REST API. Frontends read this instead of hardcoding module lists.
 - `schemas/` — pydantic request/response schemas.
 - `api/` — `MuninViewSet` (AllowAny; admin JWT gets extra fields), `ConfigEntryViewSet`
   (JWT + IsAdminUser), pagination, permissions; root prefix `api/munin/v2/`.
-  The list adds `platform.toolbox_status` per request, outside munin's cache — lazy import behind
-  `find_spec("django_utils.toolbox")`, `None` without the client; munin never hard-imports the toolbox.
+  `ConfigHealthViewSet` (IsAdminUser) serves `health/` and `health/check/` — listed before `<str:key>/`,
+  which would take "health" for a module key.
+- `services/health_service.py` — runs the system checks tagged `entirius_config` (+ `entirius_probe` on
+  request) with `databases=["default"]`; never cached. `checks.py` registers `toolbox.status` only when
+  `find_spec("django_utils.toolbox")` finds the client; munin never hard-imports the toolbox.
 - `management/commands/discover_modules.py` — manual re-scan entry point.
 
 Layer rule: `API → Services → Models → DB`. No ORM in views.

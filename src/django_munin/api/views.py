@@ -8,6 +8,7 @@ from importlib.util import find_spec
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
+from django.utils import timezone
 from django_utils.api.v2_errors import raise_pydantic_as_drf
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from pydantic import ValidationError
@@ -21,8 +22,9 @@ from django_munin.api.pagination import AdminPageNumberPagination
 from django_munin.api.permissions import IsAdminUser
 from django_munin.schemas.requests.config_entry import ConfigEntryCreateRequest, ConfigEntryUpdateRequest
 from django_munin.schemas.responses.config_entry import ConfigEntryListResponse, ConfigEntryResponse
+from django_munin.schemas.responses.health import ConfigHealthResponse
 from django_munin.schemas.responses.module import ModulePublicResponse, MuninListResponse
-from django_munin.services import config_service
+from django_munin.services import config_service, health_service
 
 _ERROR_RESPONSES = {
     400: {"description": "Validation error"},
@@ -37,7 +39,10 @@ def _is_admin_request(request: Request) -> bool:
 
 
 def _toolbox_status() -> str | None:
-    """Toolbox availability for the CMS; ``None`` when this Volkanos has no toolbox client installed."""
+    """Deprecated since the config-health release — `toolbox.status` in `GET health/` replaces it; removed in 3.0.0.
+
+    Kept so a CMS older than the health panel keeps its toolbox banner after a munin upgrade.
+    """
     if find_spec("django_utils.toolbox") is None:
         return None
     from django_utils.toolbox.status import status
@@ -174,3 +179,33 @@ class ConfigEntryViewSet(viewsets.ViewSet):
         except ObjectDoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema_view(list=extend_schema(tags=["Config Health"]), recheck=extend_schema(tags=["Config Health"]))
+class ConfigHealthViewSet(viewsets.ViewSet):
+    """Configuration health: Django system checks tagged ``entirius_config``, computed on every read."""
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(
+        summary="Configuration health",
+        description="Runs the config-only checks (no network probes except the cached toolbox status).",
+        responses={200: ConfigHealthResponse, **_ERROR_RESPONSES},
+    )
+    def list(self, request: Request, **kwargs) -> Response:
+        return self._respond(probe=False)
+
+    @extend_schema(
+        summary="Check again, with probes",
+        description="Runs the config checks plus the live probes (tag `entirius_probe`, e.g. an SMTP login; each cached 60 s).",
+        request=None,
+        responses={200: ConfigHealthResponse, **_ERROR_RESPONSES},
+    )
+    def recheck(self, request: Request, **kwargs) -> Response:
+        return self._respond(probe=True)
+
+    @staticmethod
+    def _respond(probe: bool) -> Response:
+        response = ConfigHealthResponse(checked_at=timezone.now(), checks=health_service.collect(probe=probe))
+        return Response(response.model_dump(mode="json"))
