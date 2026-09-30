@@ -13,8 +13,10 @@ class PlatformInfo(BaseModel):
     version: str = Field(description="Platform version", examples=["2.0.0"])
     toolbox_status: str | None = Field(
         None,
-        description="AI toolbox availability: configured, unconfigured or unreachable; null when the toolbox client is not installed",
+        description="Deprecated — read `toolbox.status` from `GET /api/munin/v2/health/`; removed in 3.0.0. "
+        "AI toolbox availability: configured, unconfigured or unreachable; null when the toolbox client is not installed",
         examples=["configured"],
+        json_schema_extra={"deprecated": True},
     )
 
 
