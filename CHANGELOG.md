@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.2.0 — 2026-09-30
 
 - **Configuration health.** `GET /api/munin/v2/health/` (IsAdminUser) aggregates every Django system check
   tagged `entirius_config` into rows (`code`, `module`, `state`, `severity`, `title`, `detail`, `fix_url`,
