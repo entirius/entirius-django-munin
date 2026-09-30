@@ -23,6 +23,7 @@ class DjangoMuninConfig(AppConfig):
     def ready(self) -> None:
         from django.db.models.signals import post_delete, post_migrate, post_save
 
+        from django_munin import checks
         from django_munin.models import ConfigEntry, Module
         from django_munin.services.config_service import invalidate_munin_cache
 
@@ -31,3 +32,4 @@ class DjangoMuninConfig(AppConfig):
         post_save.connect(invalidate_munin_cache, sender=ConfigEntry, dispatch_uid="munin.config_entry.post_save")
         post_delete.connect(invalidate_munin_cache, sender=ConfigEntry, dispatch_uid="munin.config_entry.post_delete")
         post_migrate.connect(discover_modules_after_migrate, sender=self, dispatch_uid="munin.post_migrate.discover")
+        checks.register()
