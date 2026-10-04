@@ -98,6 +98,7 @@ class ConfigEntryViewSet(viewsets.ViewSet):
 
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
+    access_area = "munin.config"
 
     @extend_schema(
         summary="List config entries",
@@ -187,6 +188,8 @@ class ConfigHealthViewSet(viewsets.ViewSet):
 
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
+    access_area = "munin.config"
+    access_levels = {"POST": "read"}
 
     @extend_schema(
         summary="Configuration health",

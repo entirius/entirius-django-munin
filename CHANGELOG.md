@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- Access: the module declares its own access areas on its AppConfig and its admin views (copied from the
+  entirius-django-access defaults; behaviour unchanged).
+
 ## 2.2.0 — 2026-09-30
 
 - **Configuration health.** `GET /api/munin/v2/health/` (IsAdminUser) aggregates every Django system check
