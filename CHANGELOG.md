@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.3.1 — 2026-11-04
+
+- **Configuration health honors `SILENCED_SYSTEM_CHECKS`.** `GET /api/munin/v2/health/` and
+  `POST /api/munin/v2/health/check/` leave out silenced messages, as `manage.py check` does; a code with a silenced
+  message gets no `configured` row, also when its probe passes (`email.smtp`, `siteintel.keys`). Without silenced checks
+  the rows are unchanged. Schema unchanged.
+
 ## 2.3.0 — 2026-10-12
 
 - Access: the module declares its own access areas on its AppConfig and its admin views (copied from the

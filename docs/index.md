@@ -47,6 +47,10 @@ switched off on purpose, `severity` empty, listed after the failing rows and bef
 python manage.py check --database default --tag entirius_config
 ```
 
+Messages whose `id` is listed in `SILENCED_SYSTEM_CHECKS` are left out, as `manage.py check` leaves them out. A
+code with a silenced message gets no `configured` row, even when another check under that code (its probe) passes.
+A silenced probe message only shows on `POST /health/check/`, since `GET` never runs the probes.
+
 Munin registers `toolbox.status` itself when `django_utils.toolbox` is installed — `django_utils.toolbox.status()`
 as a check (probe cached 60 s). `unconfigured` and `unreachable` are warnings. With `AI_TOOLBOX_ENABLED = False`
 the toolbox is `disabled`: the check passes, `health/` shows the row with `state: disabled`, and the CLI prints

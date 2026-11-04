@@ -92,6 +92,43 @@ class TestCollect:
         ]
         assert (rows[1]["title"], rows[1]["detail"]) == ("d.off off", "on purpose")
 
+    def test_silenced_messages_are_omitted_without_a_passing_row(self, registry, settings):
+        settings.SILENCED_SYSTEM_CHECKS = ["a.warning"]
+        registry.register(lambda **kw: [_warning("a.warning")], "entirius_config", "a.check")
+        assert health_service.collect() == []
+
+    def test_mixed_messages_keep_only_unsilenced_rows(self, registry, settings):
+        settings.SILENCED_SYSTEM_CHECKS = ["a.warning"]
+        registry.register(lambda **kw: [_warning("a.warning"), _warning("b.warning")], "entirius_config", "a.check")
+        assert [row["code"] for row in health_service.collect()] == ["b.warning"]
+
+    def test_empty_checks_still_pass_when_another_check_is_silenced(self, registry, settings):
+        settings.SILENCED_SYSTEM_CHECKS = ["a.warning"]
+        registry.register(lambda **kw: [_warning("a.warning")], "entirius_config", "a.check")
+        registry.register(lambda **kw: [], "entirius_config", "b.check")
+        assert health_service.collect() == [health_service._passing_row("b.check")]
+
+    def test_a_code_silenced_by_its_config_check_stays_absent_when_its_probe_passes(self, registry, settings):
+        settings.SILENCED_SYSTEM_CHECKS = ["mail.smtp"]
+        registry.register(lambda **kw: [_warning("mail.smtp")], "entirius_config", "mail.smtp")
+        registry.register(lambda **kw: [], "entirius_probe", "mail.smtp", deploy=True)
+        assert health_service.collect() == []
+        assert health_service.collect(probe=True) == []
+
+    def test_a_silenced_probe_message_hides_its_code_on_recheck_only(self, registry, settings):
+        settings.SILENCED_SYSTEM_CHECKS = ["mail.smtp"]
+        registry.register(lambda **kw: [], "entirius_config", "mail.smtp")
+        registry.register(lambda **kw: [_warning("mail.smtp")], "entirius_probe", "mail.smtp", deploy=True)
+        assert health_service.collect() == [health_service._passing_row("mail.smtp")]
+        assert health_service.collect(probe=True) == []
+
+    def test_a_silenced_informational_message_hides_its_code(self, registry, settings):
+        settings.SILENCED_SYSTEM_CHECKS = ["d.off"]
+        registry.register(
+            lambda **kw: [Info("d.off off", id="d.off", obj={"state": "disabled"})], "entirius_config", "d.off"
+        )
+        assert health_service.collect() == []
+
     def test_untagged_checks_are_ignored(self, registry):
         registry.register(lambda **kw: [_warning("x.y")], "models")
         assert health_service.collect() == []
@@ -140,6 +177,13 @@ class TestEndpoints:
         response = admin_client.post(f"{URL}check/")
         assert response.status_code == 200
         assert [r["code"] for r in response.data["checks"]] == ["a.p"]
+
+    def test_get_and_recheck_agree_on_a_silenced_shared_code(self, admin_client, registry, settings):
+        settings.SILENCED_SYSTEM_CHECKS = ["mail.smtp"]
+        registry.register(lambda **kw: [_warning("mail.smtp")], "entirius_config", "mail.smtp")
+        registry.register(lambda **kw: [], "entirius_probe", "mail.smtp", deploy=True)
+        assert admin_client.get(URL).data["checks"] == []
+        assert admin_client.post(f"{URL}check/").data["checks"] == []
 
     def test_disabled_toolbox_is_one_passing_row_with_its_state(self, admin_client, registry, toolbox_status):
         toolbox_status.return_value = "disabled"
