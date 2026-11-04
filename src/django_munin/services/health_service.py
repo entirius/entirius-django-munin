@@ -4,8 +4,11 @@
 
 """Configuration health: every Django system check tagged ``entirius_config`` (plus ``entirius_probe`` on request).
 
-A check's second tag is its code (``email.smtp``); a check that returns nothing is one ``configured`` row, so the
-CMS can show what passed. Never cached — checks own their caches, and a fixed config must clear on the next read.
+A check's second tag is its code (``email.smtp``); a code whose checks return nothing is one ``configured`` row, so
+the CMS can show what passed. Never cached — checks own their caches, and a fixed config must clear on the next read.
+
+Messages listed in ``SILENCED_SYSTEM_CHECKS`` are dropped, as ``manage.py check`` drops them. A code with a silenced
+message gets no ``configured`` row, even when another check under that code (its probe) returns nothing.
 
 Every check is called with ``report_state=True``: a check may then answer a message below ``WARNING`` for a state
 that passes but is worth showing (the toolbox switched off on purpose). That is an informational row — the state
@@ -30,13 +33,18 @@ def collect(probe: bool = False) -> list[dict]:
     """Failing rows first (by severity), then informational rows, then one ``configured`` row per silent code."""
     tags = {CONFIG_TAG, PROBE_TAG} if probe else {CONFIG_TAG}
     reported: dict[str, list[dict]] = {}
+    silenced: set[str] = set()
     for check in registry.get_checks(include_deployment_checks=probe):
         if tags.isdisjoint(check.tags):
             continue
         code = _code(check)
-        reported.setdefault(code, []).extend(_run(check, code))
+        check_rows, check_silenced = _run(check, code)
+        reported.setdefault(code, []).extend(check_rows)
+        if check_silenced:
+            silenced.add(code)
     rows = sorted((r for rs in reported.values() for r in rs), key=lambda r: _SEVERITY_ORDER.get(r["severity"], 3))
-    return rows + [_passing_row(code) for code, rs in sorted(reported.items()) if not rs]
+    passing = [_passing_row(code) for code, rs in sorted(reported.items()) if not rs and code not in silenced]
+    return rows + passing
 
 
 def _code(check) -> str:
@@ -44,14 +52,17 @@ def _code(check) -> str:
     return extra[0] if extra else f"{check.__module__}.{check.__name__}"
 
 
-def _run(check, code: str) -> list[dict]:
+def _run(check, code: str) -> tuple[list[dict], bool]:
+    """The check's visible rows, and whether it had a silenced message."""
     probe = PROBE_TAG in check.tags
     try:
-        messages = check(app_configs=None, databases=["default"], **{REPORT_STATE_KWARG: True})
-        return [{**_message_row(code, m), "probe": probe} for m in messages]
+        messages = list(check(app_configs=None, databases=["default"], **{REPORT_STATE_KWARG: True}))
+        visible = [message for message in messages if not message.is_silenced()]
+        return [{**_message_row(code, m), "probe": probe} for m in visible], len(visible) < len(messages)
     except Exception:  # noqa: BLE001 — one broken check must not take the whole panel down
         logger.exception("Configuration check %s raised", code)
-        return [_row(code, state="error", severity="medium", title="Configuration check failed to run", probe=probe)]
+        error = _row(code, state="error", severity="medium", title="Configuration check failed to run", probe=probe)
+        return [error], False
 
 
 def _message_row(code: str, message: CheckMessage) -> dict:
