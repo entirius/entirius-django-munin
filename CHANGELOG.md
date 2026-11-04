@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.3.1 — 2026-11-04
 
 - **Configuration health honors `SILENCED_SYSTEM_CHECKS`.** `GET /api/munin/v2/health/` and
   `POST /api/munin/v2/health/check/` leave out silenced messages, as `manage.py check` does; a code with a silenced
